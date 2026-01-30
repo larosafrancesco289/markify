@@ -70,12 +70,14 @@ export async function POST(
     }
 
     const sanitizedHtml = sanitizeHtml(content);
-    const markdown = normalizeUnicode(convertToMarkdown(sanitizedHtml));
     const title = rawTitle ? normalizeUnicode(rawTitle) : "";
+    const markdown = normalizeUnicode(
+      convertToMarkdown(sanitizedHtml, { title })
+    );
 
     return NextResponse.json({
       title,
-      markdown: title ? `# ${title}\n\n${markdown}` : markdown,
+      markdown,
       url,
       usedBrowser,
     });

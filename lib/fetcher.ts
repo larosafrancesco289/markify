@@ -6,15 +6,48 @@ const STATIC_FETCH_TIMEOUT = 10000;
 const MIN_CONTENT_LENGTH = 200;
 
 const JS_HEAVY_PATTERNS = [
+  // Competition/ML platforms
   /kaggle\.com/i,
-  /medium\.com\/@/i,
+  /huggingface\.co/i,
+
+  // Blog platforms with JS rendering
+  /medium\.com/i,
+  /towardsdatascience\.com/i,
+  /hackernoon\.com/i,
+  /dev\.to/i,
+  /hashnode\.dev/i,
+  /substack\.com/i,
+  /vercel\.com\/blog/i,
+
+  // Productivity/collaboration tools
   /notion\.so/i,
   /figma\.com/i,
   /miro\.com/i,
   /airtable\.com/i,
-  /linkedin\.com\/posts/i,
+  /coda\.io/i,
+  /clickup\.com/i,
+
+  // Social platforms
+  /linkedin\.com/i,
   /twitter\.com/i,
   /x\.com/i,
+  /reddit\.com/i,
+  /news\.ycombinator\.com/i,
+  /threads\.net/i,
+
+  // Video/streaming
+  /youtube\.com/i,
+  /twitch\.tv/i,
+  /vimeo\.com/i,
+
+  // Documentation with dynamic rendering
+  /docs\.google\.com/i,
+  /gitbook\.io/i,
+  /readme\.io/i,
+
+  // E-commerce (often heavily JS-dependent)
+  /shopify\.com/i,
+  /amazon\.com/i,
 ];
 
 function isJsHeavySite(url: string): boolean {

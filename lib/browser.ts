@@ -1,11 +1,11 @@
 import { chromium, firefox, Browser, BrowserContext, Page } from "playwright";
 
 const MAX_CONCURRENT_PAGES = 3;
-const NAVIGATION_TIMEOUT = 20000;
-const NETWORK_IDLE_TIMEOUT = 15000;
-const TOTAL_TIMEOUT = 30000;
-const CONTENT_WAIT_TIMEOUT = 5000;
-const JS_RENDER_DELAY = 1500;
+const NAVIGATION_TIMEOUT = 25000;
+const NETWORK_IDLE_TIMEOUT = 20000;
+const TOTAL_TIMEOUT = 45000;
+const CONTENT_WAIT_TIMEOUT = 8000;
+const JS_RENDER_DELAY = 2500;  // Increased for React/Next.js hydration
 const DIALOG_CHECK_TIMEOUT = 500;
 
 const BLOCKED_RESOURCE_EXTENSIONS =
@@ -25,6 +25,20 @@ const CONTENT_SELECTORS = [
   ".content",
   "#content",
   "[data-testid]",
+  // Blog/article content
+  ".post-content",
+  ".article-content",
+  ".entry-content",
+  ".prose",
+  // Documentation
+  ".markdown-body",
+  ".documentation",
+  ".docs-content",
+  // Platform-specific
+  "[class*='ArticleBody']",  // Medium
+  "[class*='PostContent']",  // Various blogs
+  ".competition-overview",    // Kaggle
+  ".readme",                  // GitHub
 ];
 
 const COOKIE_DISMISS_SELECTORS = [

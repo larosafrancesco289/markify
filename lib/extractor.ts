@@ -1,48 +1,12 @@
+import { ALL_NOISE_SELECTORS } from "./noise";
 import type { ExtractedContent } from "./types";
-
-const NOISE_SELECTORS = [
-  // Always remove
-  "script",
-  "style",
-  "noscript",
-  "link",
-  "meta",
-  "svg",
-  "iframe",
-
-  // Navigation
-  "nav",
-  '[role="navigation"]',
-
-  // Page chrome
-  "header",
-  "footer",
-  '[role="banner"]',
-  '[role="contentinfo"]',
-
-  // Ads and social
-  ".ad",
-  ".ads",
-  ".advertisement",
-  ".social-share",
-  ".share-buttons",
-
-  // Hidden elements
-  '[aria-hidden="true"]',
-  "[hidden]",
-  ".hidden",
-  '[style*="display: none"]',
-  '[style*="display:none"]',
-
-  // Comments sections
-  ".comments",
-  "#comments",
-  ".comment-section",
-];
 
 function getTitle(doc: Document): string {
   // Try og:title first (usually the cleanest)
-  const ogTitle = doc.querySelector('meta[property="og:title"]')?.getAttribute("content")?.trim();
+  const ogTitle = doc
+    .querySelector('meta[property="og:title"]')
+    ?.getAttribute("content")
+    ?.trim();
   if (ogTitle) return ogTitle;
 
   // Try <title> element
@@ -57,7 +21,7 @@ function getTitle(doc: Document): string {
 }
 
 function removeNoiseElements(body: HTMLElement): void {
-  for (const selector of NOISE_SELECTORS) {
+  for (const selector of ALL_NOISE_SELECTORS) {
     const elements = body.querySelectorAll(selector);
     for (const el of elements) {
       el.remove();
