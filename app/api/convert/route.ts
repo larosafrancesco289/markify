@@ -2,8 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { JSDOM } from "jsdom";
 import { Readability } from "@mozilla/readability";
 import { z } from "zod";
+
 import { convertToMarkdown } from "@/lib/converter";
 import { normalizeUnicode, sanitizeHtml } from "@/lib/sanitizer";
+import { fetchHtml, BrowserError, BrowserTimeoutError } from "@/lib/fetcher";
 import type { ConversionResult, ConversionError } from "@/lib/types";
 
 // Force Node.js runtime (jsdom is not compatible with Edge)
@@ -12,38 +14,6 @@ export const runtime = "nodejs";
 const urlSchema = z.object({
   url: z.string().url("Invalid URL format"),
 });
-
-const FETCH_TIMEOUT = 10000;
-
-async function fetchWithTimeout(
-  url: string,
-  timeout: number
-): Promise<Response> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeout);
-
-  try {
-    const response = await fetch(url, {
-      signal: controller.signal,
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (compatible; Markify/1.0; +https://markify.app)",
-        Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.5",
-      },
-    });
-    return response;
-  } finally {
-    clearTimeout(timeoutId);
-  }
-}
-
-function isHtmlResponse(contentType: string | null): boolean {
-  return Boolean(
-    contentType?.includes("text/html") ||
-      contentType?.includes("application/xhtml+xml")
-  );
-}
 
 export async function POST(
   request: NextRequest
@@ -61,14 +31,19 @@ export async function POST(
 
     const { url } = parsed.data;
 
-    // Fetch the page
-    let response: Response;
+    let fetchResult;
     try {
-      response = await fetchWithTimeout(url, FETCH_TIMEOUT);
+      fetchResult = await fetchHtml(url);
     } catch (error) {
-      if (error instanceof Error && error.name === "AbortError") {
+      if (error instanceof BrowserTimeoutError) {
         return NextResponse.json(
-          { error: "Request timed out", code: "TIMEOUT" },
+          { error: "Page took too long to render", code: "BROWSER_TIMEOUT" },
+          { status: 504 }
+        );
+      }
+      if (error instanceof BrowserError) {
+        return NextResponse.json(
+          { error: "Failed to render page", code: "BROWSER_ERROR" },
           { status: 502 }
         );
       }
@@ -78,30 +53,7 @@ export async function POST(
       );
     }
 
-    if (!response.ok) {
-      return NextResponse.json(
-        {
-          error: `Failed to fetch URL: ${response.status} ${response.statusText}`,
-          code: "FETCH_FAILED",
-        },
-        { status: 502 }
-      );
-    }
-
-    // Check content type
-    const contentType = response.headers.get("content-type");
-    if (!isHtmlResponse(contentType)) {
-      return NextResponse.json(
-        {
-          error: `URL does not return HTML content (got: ${contentType || "unknown"})`,
-          code: "NOT_HTML",
-        },
-        { status: 415 }
-      );
-    }
-
-    // Get HTML content
-    const html = await response.text();
+    const { html, usedBrowser } = fetchResult;
 
     // Parse with jsdom
     const dom = new JSDOM(html, { url });
@@ -140,6 +92,7 @@ export async function POST(
       title,
       markdown,
       url,
+      usedBrowser,
     });
   } catch (error) {
     console.error("Conversion error:", error);

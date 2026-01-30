@@ -2,6 +2,7 @@ export interface ConversionResult {
   title: string;
   markdown: string;
   url: string;
+  usedBrowser?: boolean;
 }
 
 export interface ConversionError {

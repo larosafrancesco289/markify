@@ -77,10 +77,11 @@ export function createTurndownService(): TurndownService {
       return node.nodeName === "PRE" && node.querySelector("code") !== null;
     },
     replacement: (_content, node) => {
-      const codeElement = (node as HTMLElement).querySelector("code")!;
-      const langMatch = codeElement.className.match(/(?:language-|lang-)(\w+)/);
+      const codeElement = (node as HTMLElement).querySelector("code");
+      const className = codeElement?.className || "";
+      const langMatch = className.match(/(?:language-|lang-)(\w+)/);
       const lang = langMatch ? langMatch[1] : "";
-      const code = codeElement.textContent || "";
+      const code = codeElement?.textContent || (node as HTMLElement).textContent || "";
 
       return `\n\n\`\`\`${lang}\n${code.trim()}\n\`\`\`\n\n`;
     },
