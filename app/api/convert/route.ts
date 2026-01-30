@@ -1,19 +1,37 @@
 import { NextRequest, NextResponse } from "next/server";
 import { JSDOM } from "jsdom";
-import { Readability } from "@mozilla/readability";
 import { z } from "zod";
 
 import { convertToMarkdown } from "@/lib/converter";
+import { extractContent } from "@/lib/extractor";
 import { normalizeUnicode, sanitizeHtml } from "@/lib/sanitizer";
 import { fetchHtml, BrowserError, BrowserTimeoutError } from "@/lib/fetcher";
 import type { ConversionResult, ConversionError } from "@/lib/types";
 
-// Force Node.js runtime (jsdom is not compatible with Edge)
 export const runtime = "nodejs";
 
 const urlSchema = z.object({
   url: z.string().url("Invalid URL format"),
 });
+
+function handleFetchError(error: unknown): NextResponse<ConversionError> {
+  if (error instanceof BrowserTimeoutError) {
+    return NextResponse.json(
+      { error: "Page took too long to render", code: "BROWSER_TIMEOUT" },
+      { status: 504 }
+    );
+  }
+  if (error instanceof BrowserError) {
+    return NextResponse.json(
+      { error: "Failed to render page", code: "BROWSER_ERROR" },
+      { status: 502 }
+    );
+  }
+  return NextResponse.json(
+    { error: "Failed to fetch URL", code: "FETCH_FAILED" },
+    { status: 502 }
+  );
+}
 
 export async function POST(
   request: NextRequest
@@ -31,66 +49,33 @@ export async function POST(
 
     const { url } = parsed.data;
 
-    let fetchResult;
-    try {
-      fetchResult = await fetchHtml(url);
-    } catch (error) {
-      if (error instanceof BrowserTimeoutError) {
-        return NextResponse.json(
-          { error: "Page took too long to render", code: "BROWSER_TIMEOUT" },
-          { status: 504 }
-        );
-      }
-      if (error instanceof BrowserError) {
-        return NextResponse.json(
-          { error: "Failed to render page", code: "BROWSER_ERROR" },
-          { status: 502 }
-        );
-      }
-      return NextResponse.json(
-        { error: "Failed to fetch URL", code: "FETCH_FAILED" },
-        { status: 502 }
-      );
+    const fetchResult = await fetchHtml(url).catch(handleFetchError);
+    if (fetchResult instanceof NextResponse) {
+      return fetchResult;
     }
 
     const { html, usedBrowser } = fetchResult;
 
-    // Parse with jsdom
     const dom = new JSDOM(html, { url });
-    const document = dom.window.document;
+    const { title: rawTitle, content } = extractContent(dom.window.document);
 
-    // Extract main content with Readability
-    const reader = new Readability(document);
-    const article = reader.parse();
-
-    if (!article || !article.content) {
+    if (!content) {
       return NextResponse.json(
         {
-          error: "Could not extract readable content from the page",
+          error: "Could not extract content from the page",
           code: "EXTRACTION_FAILED",
         },
         { status: 422 }
       );
     }
 
-    // Sanitize the extracted HTML
-    const sanitizedHtml = sanitizeHtml(article.content);
-
-    // Convert to Markdown
-    let markdown = convertToMarkdown(sanitizedHtml);
-
-    // Normalize unicode
-    markdown = normalizeUnicode(markdown);
-
-    // Add title as H1 if available
-    const title = article.title ? normalizeUnicode(article.title.trim()) : "";
-    if (title) {
-      markdown = `# ${title}\n\n${markdown}`;
-    }
+    const sanitizedHtml = sanitizeHtml(content);
+    const markdown = normalizeUnicode(convertToMarkdown(sanitizedHtml));
+    const title = rawTitle ? normalizeUnicode(rawTitle) : "";
 
     return NextResponse.json({
       title,
-      markdown,
+      markdown: title ? `# ${title}\n\n${markdown}` : markdown,
       url,
       usedBrowser,
     });

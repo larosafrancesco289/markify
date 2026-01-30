@@ -9,3 +9,8 @@ export interface ConversionError {
   error: string;
   code: string;
 }
+
+export interface ExtractedContent {
+  title: string;
+  content: string;
+}
