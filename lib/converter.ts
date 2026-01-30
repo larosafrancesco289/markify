@@ -7,10 +7,6 @@ import {
   normalizeTextForComparison,
 } from "./noise";
 
-// ============================================================================
-// Turndown Service Configuration
-// ============================================================================
-
 function createTurndownService(): TurndownService {
   const turndown = new TurndownService({
     headingStyle: "atx",
@@ -160,10 +156,6 @@ function createTurndownService(): TurndownService {
   return turndown;
 }
 
-// ============================================================================
-// Post-Processing Patterns
-// ============================================================================
-
 /** Lines that should be filtered from markdown output */
 const NOISE_LINE_PATTERNS = [
   // UI elements and actions
@@ -279,17 +271,9 @@ const NOISE_LINE_PATTERNS = [
 function isNoiseLine(line: string): boolean {
   const trimmed = line.trim();
   if (!trimmed) return false;
-
-  for (const pattern of NOISE_LINE_PATTERNS) {
-    if (pattern.test(trimmed)) return true;
-  }
-
-  return isIconLigatureText(trimmed);
+  const matchesPattern = NOISE_LINE_PATTERNS.some((p) => p.test(trimmed));
+  return matchesPattern || isIconLigatureText(trimmed);
 }
-
-// ============================================================================
-// Markdown Cleanup
-// ============================================================================
 
 /** Regex replacements for fixing broken markdown patterns */
 const MARKDOWN_CLEANUP_PATTERNS: [RegExp, string][] = [
@@ -322,17 +306,13 @@ const MARKDOWN_CLEANUP_PATTERNS: [RegExp, string][] = [
 ];
 
 function cleanupMarkdown(markdown: string): string {
-  // Filter noise lines
   const lines = markdown.split("\n");
   const filtered = lines.filter((line) => !line.trim() || !isNoiseLine(line));
-  let result = filtered.join("\n");
 
-  // Apply pattern-based cleanup
-  for (const [pattern, replacement] of MARKDOWN_CLEANUP_PATTERNS) {
-    result = result.replace(pattern, replacement);
-  }
-
-  return result;
+  return MARKDOWN_CLEANUP_PATTERNS.reduce(
+    (text, [pattern, replacement]) => text.replace(pattern, replacement),
+    filtered.join("\n")
+  );
 }
 
 function deduplicateHeadings(markdown: string): string {
@@ -352,10 +332,6 @@ function deduplicateHeadings(markdown: string): string {
 
   return result.join("\n");
 }
-
-// ============================================================================
-// Public API
-// ============================================================================
 
 export interface ConvertOptions {
   /** Title to prepend as h1 if not already present */

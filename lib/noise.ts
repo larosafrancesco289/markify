@@ -1,12 +1,3 @@
-/**
- * Shared noise filtering constants and utilities for content extraction.
- * Used by both the extractor (DOM-level removal) and converter (Turndown filtering).
- */
-
-// ============================================================================
-// DOM Element Selectors (for pre-extraction removal)
-// ============================================================================
-
 /** Elements that should always be removed from the DOM before extraction */
 export const ALWAYS_REMOVE_SELECTORS = [
   "script",
@@ -168,10 +159,6 @@ export const ALL_NOISE_SELECTORS = [
   ...RELATED_CONTENT_SELECTORS,
 ] as const;
 
-// ============================================================================
-// Turndown-specific noise tags
-// ============================================================================
-
 /** HTML tags that Turndown should completely remove */
 export const NOISE_TAGS: string[] = [
   "nav",
@@ -205,14 +192,7 @@ export const TURNDOWN_NOISE_SELECTORS = [
   "[class*='icon']",
 ];
 
-// ============================================================================
-// Icon Ligature Detection
-// ============================================================================
-
-/**
- * Pattern for detecting Material icon ligature text.
- * Matches common icon names like: arrow_back, keyboard_arrow_up, play_arrow, etc.
- */
+/** Pattern for Material icon ligature text (e.g., arrow_back, keyboard_arrow_up) */
 const ICON_LIGATURE_PATTERN = new RegExp(
   "^(" +
     // Arrow/navigation icons
@@ -247,30 +227,15 @@ const ICON_LIGATURE_PATTERN = new RegExp(
 /** Pattern for snake_case text that looks like icon names */
 const SNAKE_CASE_ICON_PATTERN = /^[a-z]+(_[a-z0-9]+)+$/;
 
-/**
- * Checks if text appears to be icon ligature text (e.g., Material Icons).
- */
+/** Checks if text appears to be icon ligature text (e.g., Material Icons) */
 export function isIconLigatureText(text: string): boolean {
   const trimmed = text.trim();
   if (!trimmed || trimmed.length > 50) return false;
-
   if (ICON_LIGATURE_PATTERN.test(trimmed)) return true;
-
-  // Generic snake_case pattern for unknown icon names
-  if (SNAKE_CASE_ICON_PATTERN.test(trimmed) && trimmed.length < 30) {
-    return true;
-  }
-
-  return false;
+  return SNAKE_CASE_ICON_PATTERN.test(trimmed) && trimmed.length < 30;
 }
 
-// ============================================================================
-// Text Normalization
-// ============================================================================
-
-/**
- * Normalizes text for comparison (lowercase, alphanumeric only, collapsed spaces).
- */
+/** Normalizes text for comparison (lowercase, alphanumeric only, collapsed spaces) */
 export function normalizeTextForComparison(text: string): string {
   return text
     .toLowerCase()

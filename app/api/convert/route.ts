@@ -14,23 +14,22 @@ const urlSchema = z.object({
   url: z.string().url("Invalid URL format"),
 });
 
-function handleFetchError(error: unknown): NextResponse<ConversionError> {
+function errorResponse(
+  error: string,
+  code: string,
+  status: number
+): NextResponse<ConversionError> {
+  return NextResponse.json({ error, code }, { status });
+}
+
+function getFetchErrorResponse(error: unknown): NextResponse<ConversionError> {
   if (error instanceof BrowserTimeoutError) {
-    return NextResponse.json(
-      { error: "Page took too long to render", code: "BROWSER_TIMEOUT" },
-      { status: 504 }
-    );
+    return errorResponse("Page took too long to render", "BROWSER_TIMEOUT", 504);
   }
   if (error instanceof BrowserError) {
-    return NextResponse.json(
-      { error: "Failed to render page", code: "BROWSER_ERROR" },
-      { status: 502 }
-    );
+    return errorResponse("Failed to render page", "BROWSER_ERROR", 502);
   }
-  return NextResponse.json(
-    { error: "Failed to fetch URL", code: "FETCH_FAILED" },
-    { status: 502 }
-  );
+  return errorResponse("Failed to fetch URL", "FETCH_FAILED", 502);
 }
 
 export async function POST(
@@ -41,51 +40,37 @@ export async function POST(
     const parsed = urlSchema.safeParse(body);
 
     if (!parsed.success) {
-      return NextResponse.json(
-        { error: "Invalid URL provided", code: "INVALID_URL" },
-        { status: 400 }
-      );
+      return errorResponse("Invalid URL provided", "INVALID_URL", 400);
     }
 
     const { url } = parsed.data;
 
-    const fetchResult = await fetchHtml(url).catch(handleFetchError);
-    if (fetchResult instanceof NextResponse) {
-      return fetchResult;
+    let fetchResult;
+    try {
+      fetchResult = await fetchHtml(url);
+    } catch (error) {
+      return getFetchErrorResponse(error);
     }
 
     const { html, usedBrowser } = fetchResult;
-
     const dom = new JSDOM(html, { url });
     const { title: rawTitle, content } = extractContent(dom.window.document);
 
     if (!content) {
-      return NextResponse.json(
-        {
-          error: "Could not extract content from the page",
-          code: "EXTRACTION_FAILED",
-        },
-        { status: 422 }
+      return errorResponse(
+        "Could not extract content from the page",
+        "EXTRACTION_FAILED",
+        422
       );
     }
 
     const sanitizedHtml = sanitizeHtml(content);
     const title = rawTitle ? normalizeUnicode(rawTitle) : "";
-    const markdown = normalizeUnicode(
-      convertToMarkdown(sanitizedHtml, { title })
-    );
+    const markdown = normalizeUnicode(convertToMarkdown(sanitizedHtml, { title }));
 
-    return NextResponse.json({
-      title,
-      markdown,
-      url,
-      usedBrowser,
-    });
+    return NextResponse.json({ title, markdown, url, usedBrowser });
   } catch (error) {
     console.error("Conversion error:", error);
-    return NextResponse.json(
-      { error: "An unexpected error occurred", code: "INTERNAL_ERROR" },
-      { status: 500 }
-    );
+    return errorResponse("An unexpected error occurred", "INTERNAL_ERROR", 500);
   }
 }

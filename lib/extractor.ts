@@ -22,10 +22,7 @@ function getTitle(doc: Document): string {
 
 function removeNoiseElements(body: HTMLElement): void {
   for (const selector of ALL_NOISE_SELECTORS) {
-    const elements = body.querySelectorAll(selector);
-    for (const el of elements) {
-      el.remove();
-    }
+    body.querySelectorAll(selector).forEach((el) => el.remove());
   }
 }
 

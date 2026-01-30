@@ -79,7 +79,3 @@ export function normalizeUnicode(text: string): string {
   return normalized;
 }
 
-export function processContent(html: string): string {
-  const sanitized = sanitizeHtml(html);
-  return normalizeUnicode(sanitized);
-}
