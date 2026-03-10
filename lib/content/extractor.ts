@@ -110,6 +110,31 @@ function extractWithFallback(doc: Document): ExtractedContent {
   };
 }
 
+function shouldPreferFallback(
+  readabilityContent: ExtractedContent,
+  fallbackContent: ExtractedContent
+): boolean {
+  if (fallbackContent.textLength === 0) {
+    return false;
+  }
+
+  return (
+    fallbackContent.textLength >= readabilityContent.textLength * 1.5 &&
+    fallbackContent.textLength - readabilityContent.textLength >= 200
+  );
+}
+
 export function extractContent(doc: Document): ExtractedContent {
-  return extractWithReadability(doc) ?? extractWithFallback(doc);
+  const fallbackContent = extractWithFallback(doc);
+  const readabilityContent = extractWithReadability(doc);
+
+  if (!readabilityContent) {
+    return fallbackContent;
+  }
+
+  if (shouldPreferFallback(readabilityContent, fallbackContent)) {
+    return fallbackContent;
+  }
+
+  return readabilityContent;
 }

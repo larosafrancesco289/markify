@@ -173,25 +173,18 @@ export default function Home() {
   }, [result]);
 
   return (
-    <main className="relative min-h-screen px-4 py-6 md:px-8 md:py-8 xl:px-10">
-      <div className="mx-auto flex min-h-[calc(100vh-3rem)] max-w-7xl flex-col gap-5 rounded-[2.25rem] border border-white/50 bg-white/20 p-3 shadow-[0_10px_60px_rgba(31,23,16,0.10)] backdrop-blur-sm md:p-4">
-        <header className="flex flex-col gap-3 rounded-[1.75rem] border border-white/45 bg-white/55 px-5 py-4 backdrop-blur md:flex-row md:items-end md:justify-between md:px-6">
-          <div>
-            <p className="text-xs uppercase tracking-[0.24em] text-ink-soft">
-              Markify
-            </p>
-            <p className="mt-2 text-sm leading-6 text-ink-soft">
-              Clean, LLM-friendly markdown from public web pages.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-3 text-xs uppercase tracking-[0.22em] text-ink-soft">
-            <span>Readability</span>
-            <span>Browser fallback</span>
-            <span>Safer fetches</span>
-          </div>
+    <main className="min-h-screen px-5 py-8 md:px-10 md:py-12">
+      <div className="mx-auto max-w-6xl">
+        <header className="flex items-center justify-between border-b border-ink/8 pb-5">
+          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-ink-soft">
+            Markify
+          </p>
+          <p className="hidden text-sm italic text-ink-faint sm:block">
+            web &rarr; markdown
+          </p>
         </header>
 
-        <div className="grid flex-1 gap-5 xl:grid-cols-[28rem_minmax(0,1fr)]">
+        <div className="mt-10 grid items-start gap-10 lg:grid-cols-[24rem_1fr] lg:gap-14">
           <UrlForm
             url={url}
             isLoading={isLoading}
@@ -213,12 +206,6 @@ export default function Home() {
           />
         </div>
 
-        <footer className="rounded-[1.75rem] border border-white/45 bg-white/55 px-5 py-4 text-sm text-ink-soft backdrop-blur md:px-6">
-          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-            <p>Built to turn messy pages into cleaner markdown without the chrome.</p>
-            <p>API includes rate limiting, health checks, and private-network blocking.</p>
-          </div>
-        </footer>
       </div>
     </main>
   );

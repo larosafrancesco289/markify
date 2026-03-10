@@ -37,4 +37,39 @@ describe("extractContent", () => {
     expect(result.textLength).toBeGreaterThan(40);
     expect(result.method).toBe("readability");
   });
+
+  test("falls back to the richer container when readability only captures a short intro", () => {
+    const dom = new JSDOM(`
+      <!doctype html>
+      <html>
+        <head>
+          <title>Next.js Docs: App Router</title>
+        </head>
+        <body>
+          <main>
+            <article>
+              <h1>App Router</h1>
+              <p>
+                The App Router is a file-system based router that uses React's
+                latest features.
+              </p>
+            </article>
+            <section>
+              <h2>Next Steps</h2>
+              <p>Installation guidance with TypeScript and ESLint setup.</p>
+              <p>Project structure overview for layouts, pages, and routing.</p>
+              <p>Navigation patterns for linking and nested routes.</p>
+              <p>Data fetching guidance for server and client components.</p>
+            </section>
+          </main>
+        </body>
+      </html>
+    `);
+
+    const result = extractContent(dom.window.document);
+
+    expect(result.content).toContain("Next Steps");
+    expect(result.content).toContain("Project structure overview");
+    expect(result.textLength).toBeGreaterThan(200);
+  });
 });

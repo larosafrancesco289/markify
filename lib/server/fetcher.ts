@@ -1,6 +1,6 @@
 import { JSDOM } from "jsdom";
-import { Readability } from "@mozilla/readability";
 
+import { extractContent } from "@/lib/content/extractor";
 import type { FetchResult } from "@/lib/types";
 
 import { fetchWithBrowser } from "./browser";
@@ -39,6 +39,34 @@ export interface FetchDependencies {
   hasSubstantialContentImpl?: (html: string, url: string) => boolean;
 }
 
+function matchesHostname(hostname: string, domain: string): boolean {
+  return hostname === domain || hostname.endsWith(`.${domain}`);
+}
+
+function isJsHeavySite(url: string): boolean {
+  try {
+    const { hostname, pathname } = new URL(url);
+    const normalizedHostname = hostname.toLowerCase();
+    const normalizedPathname = pathname.toLowerCase();
+
+    return (
+      matchesHostname(normalizedHostname, "kaggle.com") ||
+      (matchesHostname(normalizedHostname, "medium.com") &&
+        normalizedPathname.startsWith("/@")) ||
+      matchesHostname(normalizedHostname, "notion.so") ||
+      matchesHostname(normalizedHostname, "figma.com") ||
+      matchesHostname(normalizedHostname, "miro.com") ||
+      matchesHostname(normalizedHostname, "airtable.com") ||
+      (matchesHostname(normalizedHostname, "linkedin.com") &&
+        normalizedPathname.includes("/posts")) ||
+      matchesHostname(normalizedHostname, "twitter.com") ||
+      matchesHostname(normalizedHostname, "x.com")
+    );
+  } catch {
+    return false;
+  }
+}
+
 function isHtmlContentType(contentType: string | null): boolean {
   if (!contentType) {
     return false;
@@ -53,16 +81,9 @@ function isHtmlContentType(contentType: string | null): boolean {
 function hasSubstantialContent(html: string, url: string): boolean {
   try {
     const dom = new JSDOM(html, { url });
-    const reader = new Readability(dom.window.document.cloneNode(true) as Document);
-    const article = reader.parse();
+    const extractedContent = extractContent(dom.window.document);
 
-    if (!article?.textContent) {
-      return false;
-    }
-
-    return (
-      article.textContent.trim().length >= serverConfig.minExtractedTextLength
-    );
+    return extractedContent.textLength >= serverConfig.minExtractedTextLength;
   } catch {
     return false;
   }
@@ -210,8 +231,13 @@ export async function fetchHtml(
   const browserFetch = dependencies.browserFetch ?? fetchWithBrowser;
   const hasSubstantialContentImpl =
     dependencies.hasSubstantialContentImpl ?? hasSubstantialContent;
+  const requiresBrowser = isJsHeavySite(url);
   let staticHtml: string | null = null;
   let staticFetchError: FetchError | null = null;
+
+  if (requiresBrowser) {
+    return fetchWithBrowserFallback(url, browserFetch);
+  }
 
   try {
     staticHtml = await fetchStatic(url, fetchImpl);
@@ -233,10 +259,6 @@ export async function fetchHtml(
   try {
     return await fetchWithBrowserFallback(url, browserFetch);
   } catch (browserError) {
-    if (staticHtml) {
-      return { html: staticHtml, usedBrowser: false };
-    }
-
     if (staticFetchError) {
       throw staticFetchError;
     }
