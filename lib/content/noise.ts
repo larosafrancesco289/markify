@@ -1,4 +1,3 @@
-/** Elements that should always be removed from the DOM before extraction */
 export const ALWAYS_REMOVE_SELECTORS = [
   "script",
   "style",
@@ -12,7 +11,6 @@ export const ALWAYS_REMOVE_SELECTORS = [
   "audio",
 ] as const;
 
-/** Navigation and page chrome elements */
 export const NAVIGATION_SELECTORS = [
   "nav",
   "header",
@@ -24,7 +22,6 @@ export const NAVIGATION_SELECTORS = [
   '[role="contentinfo"]',
 ] as const;
 
-/** Advertisement and social sharing elements */
 export const AD_SOCIAL_SELECTORS = [
   ".ad",
   ".ads",
@@ -33,7 +30,6 @@ export const AD_SOCIAL_SELECTORS = [
   ".share-buttons",
 ] as const;
 
-/** Hidden elements (various methods) */
 export const HIDDEN_SELECTORS = [
   '[aria-hidden="true"]',
   "[hidden]",
@@ -44,14 +40,12 @@ export const HIDDEN_SELECTORS = [
   '[style*="visibility:hidden"]',
 ] as const;
 
-/** Comment sections */
 export const COMMENT_SELECTORS = [
   ".comments",
   "#comments",
   ".comment-section",
 ] as const;
 
-/** Cookie consent and modal dialogs */
 export const MODAL_SELECTORS = [
   '[class*="cookie"]',
   '[class*="consent"]',
@@ -64,7 +58,6 @@ export const MODAL_SELECTORS = [
   '[aria-modal="true"]',
 ] as const;
 
-/** Icon font elements (Material, FontAwesome, Glyphicons, etc.) */
 export const ICON_SELECTORS = [
   ".material-icons",
   ".material-icons-outlined",
@@ -85,7 +78,6 @@ export const ICON_SELECTORS = [
   "span.icon",
 ] as const;
 
-/** UI controls that should be removed */
 export const UI_CONTROL_SELECTORS = [
   '[class*="copy-button"]',
   '[class*="collapse"]',
@@ -95,7 +87,6 @@ export const UI_CONTROL_SELECTORS = [
   "button:not([type='submit'])",
 ] as const;
 
-/** Skip-to-content links */
 export const SKIP_LINK_SELECTORS = [
   '[class*="skip-"]',
   '[href="#site-content"]',
@@ -105,7 +96,6 @@ export const SKIP_LINK_SELECTORS = [
   '[class*="skip-to"]',
 ] as const;
 
-/** Common site-wide noise (newsletters, popups, CTAs) */
 export const SITE_NOISE_SELECTORS = [
   '[class*="newsletter"]',
   '[class*="subscribe"]',
@@ -119,7 +109,6 @@ export const SITE_NOISE_SELECTORS = [
   '[class*="cta-"]',
 ] as const;
 
-/** Search and auth UI elements */
 export const AUTH_SEARCH_SELECTORS = [
   '[class*="search-form"]',
   '[class*="login-"]',
@@ -128,13 +117,11 @@ export const AUTH_SEARCH_SELECTORS = [
   '[id*="search-form"]',
 ] as const;
 
-/** Breadcrumbs */
 export const BREADCRUMB_SELECTORS = [
   '[class*="breadcrumb"]',
   '[aria-label="breadcrumb"]',
 ] as const;
 
-/** Related/recommended content sections */
 export const RELATED_CONTENT_SELECTORS = [
   '[class*="related-"]',
   '[class*="recommended"]',
@@ -142,7 +129,21 @@ export const RELATED_CONTENT_SELECTORS = [
   '[class*="trending"]',
 ] as const;
 
-/** All DOM noise selectors combined for extraction */
+export const CONTENT_CANDIDATE_SELECTORS = [
+  "article",
+  "main",
+  "[role='main']",
+  ".post-content",
+  ".article-content",
+  ".entry-content",
+  ".content",
+  "#content",
+  ".markdown-body",
+  ".docs-content",
+  ".documentation",
+  ".prose",
+] as const;
+
 export const ALL_NOISE_SELECTORS = [
   ...ALWAYS_REMOVE_SELECTORS,
   ...NAVIGATION_SELECTORS,
@@ -159,7 +160,6 @@ export const ALL_NOISE_SELECTORS = [
   ...RELATED_CONTENT_SELECTORS,
 ] as const;
 
-/** HTML tags that Turndown should completely remove */
 export const NOISE_TAGS: string[] = [
   "nav",
   "header",
@@ -173,9 +173,8 @@ export const NOISE_TAGS: string[] = [
   "button",
   "canvas",
   "svg",
-];
+] as const as string[];
 
-/** Selectors for Turndown rule filtering (subset most relevant to conversion) */
 export const TURNDOWN_NOISE_SELECTORS = [
   ".advertisement",
   ".ad",
@@ -192,50 +191,43 @@ export const TURNDOWN_NOISE_SELECTORS = [
   "[class*='icon']",
 ];
 
-/** Pattern for Material icon ligature text (e.g., arrow_back, keyboard_arrow_up) */
 const ICON_LIGATURE_PATTERN = new RegExp(
   "^(" +
-    // Arrow/navigation icons
     "keyboard_arrow_(up|down|left|right)|" +
     "arrow_(back|forward|upward|downward|drop_down|drop_up)|" +
     "expand_(more|less)|chevron_(left|right)|" +
-    // Common action icons
     "close|menu|search|home|settings|check|add|remove|edit|delete|share|" +
     "more_(vert|horiz)|link|copy|content_(copy|paste)|open_in_new|launch|" +
     "download|upload|visibility(_off)?|lock(_open)?|star(_border)?|" +
     "favorite(_border)?|info|warning|error|help(_outline)?|notifications|" +
     "email|phone|place|schedule|" +
-    // Media controls
     "play_arrow|pause|stop|skip_(next|previous)|replay|volume_(up|down|off)|" +
-    // Social/interaction
     "thumb_(up|down)|comment|forum|send|attach_file|image|photo|camera|" +
-    // User/account
     "person|people|group|account_circle|face|log(out|in)|" +
-    // Files/content
     "folder|file_copy|description|article|note|bookmark|label|flag|" +
-    // Sync/refresh
     "refresh|sync|cached|autorenew|update|published_with_changes|" +
-    // View controls
     "fullscreen(_exit)?|zoom_(in|out)|fit_screen|" +
-    // Drag/sort
     "drag_(indicator|handle)|reorder|sort|filter_list|" +
-    // Status
     "done(_all)?|clear|cancel|block|report" +
     ")$"
 );
 
-/** Pattern for snake_case text that looks like icon names */
 const SNAKE_CASE_ICON_PATTERN = /^[a-z]+(_[a-z0-9]+)+$/;
 
-/** Checks if text appears to be icon ligature text (e.g., Material Icons) */
 export function isIconLigatureText(text: string): boolean {
-  const trimmed = text.trim();
-  if (!trimmed || trimmed.length > 50) return false;
-  if (ICON_LIGATURE_PATTERN.test(trimmed)) return true;
-  return SNAKE_CASE_ICON_PATTERN.test(trimmed) && trimmed.length < 30;
+  const trimmedText = text.trim();
+
+  if (!trimmedText || trimmedText.length > 50) {
+    return false;
+  }
+
+  if (ICON_LIGATURE_PATTERN.test(trimmedText)) {
+    return true;
+  }
+
+  return SNAKE_CASE_ICON_PATTERN.test(trimmedText) && trimmedText.length < 30;
 }
 
-/** Normalizes text for comparison (lowercase, alphanumeric only, collapsed spaces) */
 export function normalizeTextForComparison(text: string): string {
   return text
     .toLowerCase()

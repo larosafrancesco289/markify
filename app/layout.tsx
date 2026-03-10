@@ -1,10 +1,25 @@
 import type { Metadata } from "next";
+import { JetBrains_Mono, Newsreader } from "next/font/google";
 import { Toaster } from "sonner";
+
 import "./globals.css";
 
+const newsreader = Newsreader({
+  subsets: ["latin"],
+  weight: ["400", "600", "700"],
+  variable: "--font-serif",
+});
+
+const jetBrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500", "700"],
+  variable: "--font-mono",
+});
+
 export const metadata: Metadata = {
-  title: "Markify — URL to Markdown",
-  description: "Convert any webpage to clean, LLM-friendly markdown",
+  title: "Markify | Reader-grade URL to Markdown",
+  description:
+    "Convert public web pages into clean, LLM-friendly markdown with browser fallback and safer fetch controls.",
 };
 
 export default function RootLayout({
@@ -14,7 +29,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="antialiased">
+      <body
+        className={`${newsreader.variable} ${jetBrainsMono.variable} antialiased`}
+      >
         {children}
         <Toaster
           position="bottom-center"
@@ -22,8 +39,8 @@ export default function RootLayout({
             style: {
               background: "var(--ink)",
               color: "var(--paper)",
-              border: "none",
-              fontFamily: "'Newsreader', Georgia, serif",
+              border: "1px solid rgba(255,255,255,0.08)",
+              fontFamily: "var(--font-serif)",
             },
           }}
         />

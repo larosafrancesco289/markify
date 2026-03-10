@@ -13,15 +13,19 @@ bun run lint         # Run ESLint
 
 ## Architecture
 
-Markify is a Next.js 16 app that converts web pages to clean, LLM-friendly markdown. It uses the App Router with a single API endpoint.
+Markify is a Next.js 16 app that converts public web pages into cleaner, LLM-friendly markdown. It uses the App Router with two server endpoints:
+
+- `POST /api/convert` for URL-to-markdown conversion
+- `GET /api/health` for a lightweight health check
 
 ### Conversion Pipeline
 
-1. **Fetch** - `app/api/convert/route.ts` receives a URL, fetches the HTML with a 10s timeout
-2. **Parse** - Uses jsdom to parse HTML, then Mozilla Readability to extract main content
-3. **Sanitize** - `lib/sanitizer.ts` uses DOMPurify with a strict allowlist of HTML tags/attributes
-4. **Convert** - `lib/converter.ts` uses Turndown with custom rules for code blocks, tables, and figures
-5. **Normalize** - Unicode characters are converted to ASCII equivalents (smart quotes, dashes, etc.)
+1. **Validate + limit** - `app/api/convert/route.ts` validates the request, rate limits it, and blocks unsafe URLs
+2. **Fetch** - `lib/server/fetcher.ts` performs a static fetch with retries and browser fallback when needed
+3. **Extract** - `lib/content/extractor.ts` prefers Mozilla Readability and falls back to the best content container
+4. **Sanitize** - `lib/content/sanitizer.ts` uses DOMPurify with a strict allowlist
+5. **Convert** - `lib/content/converter.ts` uses Turndown with custom rules for code blocks, tables, figures, and absolute links
+6. **Normalize** - Unicode punctuation is normalized to ASCII-friendly equivalents
 
 ### Key Libraries
 
@@ -32,12 +36,15 @@ Markify is a Next.js 16 app that converts web pages to clean, LLM-friendly markd
 
 ### Project Structure
 
-- `app/page.tsx` - Single-page client component with URL input and markdown output
-- `app/api/convert/route.ts` - POST endpoint for URL-to-markdown conversion
-- `lib/converter.ts` - Turndown configuration with custom rules for noise removal
-- `lib/sanitizer.ts` - HTML sanitization and Unicode normalization
-- `lib/types.ts` - TypeScript interfaces for API responses
+- `app/page.tsx` - Main page container and request flow
+- `app/components/` - UI pieces for the input form, result panel, and icons
+- `app/api/convert/route.ts` - Conversion endpoint
+- `app/api/health/route.ts` - Health endpoint
+- `lib/content/` - Extraction, sanitization, markdown conversion, and noise heuristics
+- `lib/server/` - URL validation, rate limiting, fetch/browser logic, and orchestration
+- `lib/types.ts` - Shared TypeScript contracts
+- `tests/` - Regression coverage for content extraction, conversion, URL validation, fetch fallback, and rate limiting
 
 ### Styling
 
-Uses Tailwind CSS 4 with custom CSS variables for colors (`--ink`, `--paper`, `--accent`). Toast notifications via Sonner.
+Uses Tailwind CSS 4 with custom CSS variables and `next/font/google` for Newsreader + JetBrains Mono. Toast notifications via Sonner.

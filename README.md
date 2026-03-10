@@ -1,47 +1,43 @@
 # Markify
 
-A web application that converts any webpage into clean, LLM-friendly markdown. Built with Next.js 16.
+Markify turns public web pages into cleaner, LLM-friendly markdown.
 
-## Features
+It fetches the page, extracts the main readable content, strips common UI noise, sanitizes the HTML, and converts the result into copy-ready markdown. When a static fetch is weak or incomplete, it can fall back to Playwright for a browser-rendered pass.
 
-- Converts web pages to markdown optimized for large language models
-- Handles JavaScript-rendered content through headless browser automation
-- Removes navigation, ads, cookie banners, and other noise
-- Normalizes Unicode characters to ASCII equivalents
-- Preserves code blocks, tables, and semantic structure
+## Why it exists
 
-## Installation
+- Web pages are noisy. Markdown for LLMs should not include nav, cookie banners, promos, or broken fragments.
+- Static scraping is cheap but unreliable. Some pages need a real browser pass.
+- A small tool like this still needs guardrails: URL validation, rate limiting, health checks, and regression tests.
+
+## Quick start
 
 ```bash
-# Install dependencies
 bun install
-
-# Install Playwright browsers (required for JS-heavy sites)
 bunx playwright install firefox chromium
-```
-
-## Usage
-
-### Development Server
-
-```bash
+cp .env.example .env.local
 bun run dev
 ```
 
-Open http://localhost:3000 in your browser. Enter a URL and click "Convert" to generate markdown.
+Open [http://localhost:3000](http://localhost:3000).
 
-### Production Build
+## Scripts
 
 ```bash
+bun run dev
+bun run lint
+bun run test
 bun run build
-bun run start
+bun run check
 ```
 
-### API Endpoint
+`bun run check` runs lint, tests, and the production build.
 
-**POST** `/api/convert`
+## API
 
-Request body:
+### `POST /api/convert`
+
+Request:
 
 ```json
 {
@@ -49,117 +45,138 @@ Request body:
 }
 ```
 
-Response:
+Successful response:
 
 ```json
 {
   "title": "Article Title",
   "markdown": "# Article Title\n\nContent here...",
+  "excerpt": "A short summary of the extracted article...",
   "url": "https://example.com/article",
-  "usedBrowser": false
+  "usedBrowser": false,
+  "extractedBy": "readability"
 }
 ```
 
-#### Error Codes
+### `GET /api/health`
 
-| Code | HTTP Status | Description |
-|------|-------------|-------------|
-| `INVALID_URL` | 400 | URL format invalid or missing |
-| `EXTRACTION_FAILED` | 422 | No content could be extracted |
+Returns:
+
+```json
+{
+  "status": "ok"
+}
+```
+
+### Error codes
+
+| Code | Status | Meaning |
+| --- | --- | --- |
+| `INVALID_REQUEST` | 400 | Request body is malformed or missing a URL |
+| `INVALID_URL` | 400 | URL format or protocol is invalid |
+| `URL_NOT_ALLOWED` | 403 | Local, private-network, or credentialed URLs are blocked |
+| `RATE_LIMITED` | 429 | Too many conversion requests in the current window |
+| `UNSUPPORTED_CONTENT` | 415 | The URL did not return HTML |
+| `CONTENT_TOO_LARGE` | 413 | The page exceeded the configured processing limit |
+| `EXTRACTION_FAILED` | 422 | Meaningful content could not be extracted |
+| `FETCH_FAILED` | 502 | Upstream fetch failed |
 | `BROWSER_ERROR` | 502 | Browser rendering failed |
-| `BROWSER_TIMEOUT` | 504 | Page took too long to render |
-| `INTERNAL_ERROR` | 500 | Unexpected server error |
+| `BROWSER_TIMEOUT` | 504 | Browser rendering timed out |
+| `INTERNAL_ERROR` | 500 | Unexpected failure |
 
 ## Architecture
 
-### Conversion Pipeline
+### Pipeline
 
+```text
+URL -> validate -> rate limit -> fetch -> extract -> sanitize -> convert -> normalize
 ```
-URL → Fetch HTML → Extract Content → Sanitize → Convert → Normalize
-```
 
-1. **Fetch**: Retrieves HTML with a 10-second timeout. Falls back to headless browser for JavaScript-heavy sites.
-2. **Extract**: Parses HTML with jsdom, removes noise elements, and extracts the page title.
-3. **Sanitize**: Applies DOMPurify with a strict allowlist of HTML tags and attributes.
-4. **Convert**: Transforms HTML to markdown using Turndown with custom rules for code blocks, tables, and figures.
-5. **Normalize**: Converts Unicode characters (smart quotes, em dashes) to ASCII equivalents.
+### Server flow
 
-### Browser Automation
+1. `app/api/convert/route.ts` validates the request, applies rate limiting, blocks unsafe URLs, and returns a typed response.
+2. `lib/server/fetcher.ts` tries a static fetch first, retries transient failures, and falls back to Playwright if needed.
+3. `lib/content/extractor.ts` prefers Mozilla Readability, then falls back to a best-content-container heuristic.
+4. `lib/content/sanitizer.ts` runs DOMPurify and normalizes Unicode punctuation.
+5. `lib/content/converter.ts` converts the cleaned HTML to markdown with custom rules for code blocks, tables, figures, and absolute links.
 
-The application uses Playwright to render JavaScript-heavy sites. Browser rendering activates for:
+### Project layout
 
-- Single-page applications (React, Next.js, Vue)
-- Platforms that require JavaScript: Medium, Substack, LinkedIn, Twitter, Reddit, YouTube
-- Pages where static fetch returns insufficient content
-
-Browser sessions run with resource blocking (images, fonts, media) and automatic cookie consent dismissal.
-
-### Noise Removal
-
-Two filtering systems remove unwanted content:
-
-1. **CSS Selectors** (160+ patterns): Navigation, ads, social widgets, comment sections, modals, icons, related content
-2. **Regex Patterns** (269 patterns): UI buttons, cookie notices, "Sign in" links, share prompts, reading time metadata
-
-## Project Structure
-
-```
+```text
 app/
-├── page.tsx              # Main UI component
-├── layout.tsx            # Root layout with metadata
-├── globals.css           # Tailwind styles and CSS variables
-└── api/
-    └── convert/
-        └── route.ts      # POST endpoint for conversion
+  api/
+    convert/route.ts
+    health/route.ts
+  components/
+    icons.tsx
+    result-panel.tsx
+    url-form.tsx
+  globals.css
+  layout.tsx
+  page.tsx
 
 lib/
-├── browser.ts            # Playwright configuration and management
-├── converter.ts          # Turndown rules and post-processing
-├── extractor.ts          # Title detection and content extraction
-├── fetcher.ts            # Dual-mode HTML fetching
-├── noise.ts              # CSS selectors for noise removal
-├── sanitizer.ts          # DOMPurify config and Unicode normalization
-├── types.ts              # TypeScript interfaces
-└── utils.ts              # Class name utilities
+  content/
+    converter.ts
+    extractor.ts
+    noise.ts
+    sanitizer.ts
+  server/
+    browser.ts
+    config.ts
+    convert-page.ts
+    fetcher.ts
+    logger.ts
+    rate-limit.ts
+    url.ts
+  types.ts
+
+tests/
+  content/
+  server/
 ```
-
-## Dependencies
-
-| Package | Purpose |
-|---------|---------|
-| `@mozilla/readability` | Article content extraction (Firefox Reader View algorithm) |
-| `playwright` | Headless browser automation for JS-rendered pages |
-| `turndown` | HTML to markdown conversion |
-| `isomorphic-dompurify` | HTML sanitization |
-| `jsdom` | Server-side DOM parsing |
-| `zod` | Request validation |
 
 ## Configuration
 
-### Timeouts
+Markify is usable with no environment variables, but the server behavior can be tuned through `.env.local`.
 
-| Operation | Duration |
-|-----------|----------|
-| Static fetch | 10 seconds |
-| Browser navigation | 25 seconds |
-| Network idle wait | 20 seconds |
-| Total browser timeout | 45 seconds |
-| JS render delay | 2.5 seconds |
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `MARKIFY_STATIC_FETCH_TIMEOUT_MS` | `10000` | Timeout for the first-pass static fetch |
+| `MARKIFY_MAX_HTML_BYTES` | `2000000` | Maximum HTML payload size accepted for conversion |
+| `MARKIFY_MIN_EXTRACTED_TEXT_LENGTH` | `180` | Minimum text size considered meaningful content |
+| `MARKIFY_RATE_LIMIT_WINDOW_MS` | `60000` | Rate-limit window length |
+| `MARKIFY_RATE_LIMIT_MAX_REQUESTS` | `20` | Requests allowed per rate-limit window |
+| `MARKIFY_BROWSER_CONCURRENCY` | `3` | Maximum concurrent Playwright contexts |
+| `MARKIFY_BROWSER_NAVIGATION_TIMEOUT_MS` | `25000` | Browser navigation timeout |
+| `MARKIFY_BROWSER_NETWORK_IDLE_TIMEOUT_MS` | `20000` | Wait for network idle before extraction |
+| `MARKIFY_BROWSER_TOTAL_TIMEOUT_MS` | `45000` | Overall page timeout for browser-based extraction |
+| `MARKIFY_BROWSER_CONTENT_WAIT_TIMEOUT_MS` | `8000` | How long to wait for likely content selectors |
+| `MARKIFY_BROWSER_RENDER_DELAY_MS` | `2500` | Additional delay for client-side rendering/hydration |
+| `MARKIFY_FETCH_RETRY_COUNT` | `2` | Number of static fetch attempts for transient failures |
 
-### Browser Limits
+## Security and resilience
 
-- Maximum concurrent contexts: 3
-- Blocked resources: images, fonts, video, audio
+- Only public `http` and `https` URLs are accepted.
+- Localhost, private-network, link-local, and credentialed URLs are blocked to reduce SSRF risk.
+- Requests are rate limited in memory.
+- Static fetches use timeouts and size limits.
+- Browser extraction blocks heavy assets such as fonts, media, and images where possible.
 
-## Runtime Requirements
+## Testing
 
-This application requires Node.js runtime and cannot run on Edge or serverless environments. The dependencies jsdom, Readability, and Playwright require a full Node.js environment.
+The test suite focuses on real failure modes:
 
-## Development
+- article extraction over full-body noise
+- markdown conversion of relative links and code blocks
+- URL safety validation
+- static fetch and browser fallback behavior
+- in-memory rate limiting
+
+Run everything with:
 
 ```bash
-# Run linter
-bun run lint
+bun run check
 ```
 
 ## License
