@@ -72,4 +72,63 @@ describe("extractContent", () => {
     expect(result.content).toContain("Project structure overview");
     expect(result.textLength).toBeGreaterThan(200);
   });
+
+  test("ignores a link-heavy shell wrapper when choosing fallback content", () => {
+    const dom = new JSDOM(`
+      <!doctype html>
+      <html>
+        <head>
+          <title>Scholarships For Masters Studies in the UK</title>
+          <meta
+            property="og:title"
+            content="Scholarships For Masters Studies in the UK"
+          />
+        </head>
+        <body>
+          <div id="content">
+            <div class="network-links">
+              <a href="https://www.iberdrola.com/">Iberdrola.com</a>
+              <a href="https://www.spenergynetworks.co.uk/">
+                SP Energy Networks
+              </a>
+              <a href="https://www.scottishpowerrenewables.com/">
+                ScottishPower Renewables
+              </a>
+              <a href="https://www.manweb.co.uk/">Manweb</a>
+              <a href="https://www.spmanweb.co.uk/">SP Manweb</a>
+              <a href="https://www.spenergywholesale.co.uk/">
+                SP Energy Wholesale
+              </a>
+            </div>
+            <div role="main">
+              <h1>Master Scholarship</h1>
+              <p>Our applications for 2026-27 are now open.</p>
+              <p>
+                ScottishPower will provide scholarships for the 2026-2027
+                academic year for postgraduate studies at universities in the
+                United Kingdom.
+              </p>
+              <ul>
+                <li>Electrical Engineering</li>
+                <li>Mechanical Engineering</li>
+                <li>Cyber Security</li>
+                <li>Business Analytics</li>
+              </ul>
+              <p>
+                Successful candidates receive funding support, mentoring, and a
+                potential pathway into the wider energy industry.
+              </p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `);
+
+    const result = extractContent(dom.window.document);
+
+    expect(result.content).toContain("Master Scholarship");
+    expect(result.content).toContain("Successful candidates receive funding support");
+    expect(result.content).not.toContain("Iberdrola.com");
+    expect(result.excerpt).not.toContain("SP Energy Networks");
+  });
 });

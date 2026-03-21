@@ -39,12 +39,38 @@ function getTextLength(input: string): number {
   return input.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().length;
 }
 
+function getNormalizedTextContent(root: ParentNode): string {
+  return root.textContent?.replace(/\s+/g, " ").trim() ?? "";
+}
+
+function getLinkTextLength(root: ParentNode): number {
+  const text = Array.from(root.querySelectorAll("a"))
+    .map((link) => link.textContent?.replace(/\s+/g, " ").trim() ?? "")
+    .filter(Boolean)
+    .join(" ");
+
+  return text.length;
+}
+
 function getCandidateScore(candidate: Element): number {
-  const textLength = candidate.textContent?.replace(/\s+/g, " ").trim().length ?? 0;
+  const textLength = getNormalizedTextContent(candidate).length;
+  const linkTextLength = getLinkTextLength(candidate);
   const paragraphCount = candidate.querySelectorAll("p").length;
   const headingCount = candidate.querySelectorAll("h1, h2, h3").length;
+  const listItemCount = candidate.querySelectorAll("li").length;
+  const linkCount = candidate.querySelectorAll("a").length;
+  const isPrimaryContentRegion = candidate.matches("article, main, [role='main']");
+  const textWithoutLinkText = Math.max(0, textLength - linkTextLength);
 
-  return textLength + paragraphCount * 80 + headingCount * 20;
+  return (
+    textWithoutLinkText +
+    paragraphCount * 80 +
+    headingCount * 24 +
+    listItemCount * 18 +
+    (isPrimaryContentRegion ? 220 : 0) -
+    linkTextLength * 2 -
+    linkCount * 35
+  );
 }
 
 function getBestFallbackContainer(body: HTMLElement): HTMLElement {

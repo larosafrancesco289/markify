@@ -54,16 +54,16 @@ export function ResultPanel({
       <div className="border-b border-ink/8 px-5 py-4 md:px-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0 flex-1">
-            <h2 className="text-lg font-semibold tracking-tight text-ink">
+            <h2 className="line-clamp-2 break-words text-lg font-semibold tracking-tight text-ink">
               {result.title || "Untitled"}
             </h2>
             {result.excerpt ? (
-              <p className="mt-1 line-clamp-2 text-sm text-ink-soft">
+              <p className="mt-1 line-clamp-2 break-all text-sm text-ink-soft">
                 {result.excerpt}
               </p>
             ) : null}
           </div>
-          <div className="flex shrink-0 gap-1.5">
+          <div className="flex shrink-0 flex-wrap gap-1.5 sm:max-w-[16rem] sm:justify-end">
             <a
               href={result.url}
               target="_blank"
